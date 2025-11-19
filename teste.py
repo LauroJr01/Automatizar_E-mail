@@ -1280,37 +1280,79 @@
 
 # app.mainloop()
 
-import customtkinter as ctk
+# import customtkinter as ctk
 
-app = ctk.CTk()
-app.geometry("300x250")
+# app = ctk.CTk()
+# app.geometry("300x250")
 
-valores = [str(i) for i in range(1, 100)]
+# valores = [str(i) for i in range(1, 100)]
 
-# Campo principal
-entrada = ctk.CTkEntry(app, width=120)
-entrada.pack(pady=(30, 0))
+# # Campo principal
+# entrada = ctk.CTkEntry(app, width=120)
+# entrada.pack(pady=(30, 0))
 
-# Frame rolável que simula o dropdown
-frame_dropdown = ctk.CTkScrollableFrame(app, width=120, height=100)  # altura = quantos itens quer ver
-frame_dropdown.pack_forget()  # começa escondido
+# # Frame rolável que simula o dropdown
+# frame_dropdown = ctk.CTkScrollableFrame(app, width=120, height=100)  # altura = quantos itens quer ver
+# frame_dropdown.pack_forget()  # começa escondido
 
-# Adiciona botões com os valores
-for v in valores:
-    botao = ctk.CTkButton(frame_dropdown, text=v, width=100, command=lambda val=v: (
-        entrada.delete(0, 'end'),
-        entrada.insert(0, val),
-        frame_dropdown.pack_forget()
-    ))
-    botao.pack(pady=1)
+# # Adiciona botões com os valores
+# for v in valores:
+#     botao = ctk.CTkButton(frame_dropdown, text=v, width=100, command=lambda val=v: (
+#         entrada.delete(0, 'end'),
+#         entrada.insert(0, val),
+#         frame_dropdown.pack_forget()
+#     ))
+#     botao.pack(pady=1)
 
-# Abre/fecha o dropdown ao clicar na entrada
-def toggle_dropdown(event):
-    if frame_dropdown.winfo_ismapped():
-        frame_dropdown.pack_forget()
-    else:
-        frame_dropdown.pack(pady=5)
+# # Abre/fecha o dropdown ao clicar na entrada
+# def toggle_dropdown(event):
+#     if frame_dropdown.winfo_ismapped():
+#         frame_dropdown.pack_forget()
+#     else:
+#         frame_dropdown.pack(pady=5)
 
-entrada.bind("<Button-1>", toggle_dropdown)
+# entrada.bind("<Button-1>", toggle_dropdown)
 
+# app.mainloop()
+
+import customtkinter
+class MyScrollableCheckboxFrame(customtkinter.CTkScrollableFrame):
+    def __init__(self, master, title, values):
+        super().__init__(master, label_text=title)
+        self.grid_columnconfigure(0, weight=1)
+        self.values = values
+        self.checkboxes = []
+
+        for i, value in enumerate(self.values):
+            checkbox = customtkinter.CTkCheckBox(self, text=value)
+            checkbox.grid(row=i, column=0, padx=10, pady=(10, 0), sticky="w")
+            self.checkboxes.append(checkbox)
+
+    def get(self):
+        checked_checkboxes = []
+        for checkbox in self.checkboxes:
+            if checkbox.get() == 1:
+                checked_checkboxes.append(checkbox.cget("text"))
+        return checked_checkboxes
+class App(customtkinter.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("my app")
+        self.geometry("400x220")
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        values = ["value 1", "value 2", "value 3", "value 4", "value 5", "value 6"]
+        self.scrollable_checkbox_frame = MyScrollableCheckboxFrame(self, title="Values", values=values)
+        self.scrollable_checkbox_frame.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.button = customtkinter.CTkButton(self, text="my button", command=self.button_callback)
+        self.button.grid(row=3, column=0, padx=10, pady=10, sticky="ew", columnspan=2)
+
+    def button_callback(self):
+        print("checkbox_frame:", self.checkbox_frame.get())
+        print("radiobutton_frame:", self.radiobutton_frame.get())
+
+app = App()
 app.mainloop()

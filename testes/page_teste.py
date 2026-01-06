@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from setup_db import Session, Motorista, Email
+from database.setup_db import Session, Motorista, Email
 from sqlalchemy.exc import IntegrityError
 from tkinter import messagebox
 

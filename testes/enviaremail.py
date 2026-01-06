@@ -11,7 +11,10 @@ def enviar_email():
 
     # Configurar as informações do seu e-mail
     email.To = 'jr.reis1@hotmail.com'
+    email.CC = 'jr.reis1@hotmail.com'
     email.Subject = 'Assunto (Teste)'
+
+
     # email.Body = 'Corpo do E-mail'
     email.HTMLBody = '''
     <p>Olá Lauro, aqui é o código Python</p>
@@ -23,13 +26,10 @@ def enviar_email():
     <p>Abs,</p>
     <p>Lauro</p>
     '''
-
-    email.Send()
+    email.Display()  # Para abrir o e-mail antes de enviar
+    #email.Send()
     print('E-mail enviado')
 
-
-
-def iniciar_programa():
        
 
-iniciar_programa()
+enviar_email()

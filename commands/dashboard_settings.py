@@ -1,9 +1,17 @@
 import os
+import sys
 from tkinter import filedialog
 from commands.enviar_email import enviar_email, responder_email_por_dados
 from database.setup_db import Session, Email, Dados, Motorista
 from commands.visor_settings import mostrar_mensagem
 from commands.anexos_state import definir_anexos, obter_anexos
+
+# Icone
+def resource_path(rel_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, rel_path)
+    return os.path.join(os.path.abspath("."), rel_path)
+
 
 # Botão selecionar todos os e-mails
 def selecionar_todos_emails(estado):

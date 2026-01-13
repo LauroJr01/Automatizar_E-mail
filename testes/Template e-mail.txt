@@ -1,0 +1,20 @@
+PUXADA PERÁCIO PARA MATRIZ - {data} - ({carreta}° CARRETA) - {local}
+
+
+<div style="font-family: Arial, sans-serif; font-size: 12pt;">
+    <p>{saudacao}</p>
+    <br>
+    <p>Solicito CTE e MDFE referente a esse pedido.</p>
+    <p>VALOR DO FRETE SEM IMPOSTO R$ {valor_frete}.</p>
+    <p><strong>PLACA:</strong> {placa}</p>
+    <p><strong>MOTORISTA:</strong> {motorista}</p>
+    <br><br>
+</div>
+
+
+<div style="font-family: Arial, sans-serif; font-size: 12pt;">
+    <p>{saudacao}</p>
+    <br>
+    <p>Favor encerrar o manifesto.</p>
+    <br><br>
+</div>

@@ -6,7 +6,7 @@ from pages.motorista_page import abrir_janela_motorista
 from pages.texto_page import confirmar_texto
 from commands.email_settings import resetar_all_email
 from commands.motorista_settings import lista_motorista_dashboard
-from commands.dashboard_settings import selecionar_todos_emails, estado_checkbox_geral, selecionar_filial, selecionar_outros, aplicar_placeholder_combobox, salvar_e_enviar, anexar_arquivos, salvar_e_responder
+from commands.dashboard_settings import resource_path,selecionar_todos_emails, estado_checkbox_geral, selecionar_filial, selecionar_outros, aplicar_placeholder_combobox, salvar_e_enviar, anexar_arquivos, salvar_e_responder
 
 
 def iniciar_programa():
@@ -16,7 +16,8 @@ def iniciar_programa():
     app = ctk.CTk()
     app.geometry("790x450")
     app.title("Automatização de E-mail")
-    #app.iconbitmap(resource_path('icone.ico'))
+    app.iconbitmap(default=resource_path('icone.ico'))
+
 
     # Frame de cabeçalho (título visual)
     header = ctk.CTkFrame(app)

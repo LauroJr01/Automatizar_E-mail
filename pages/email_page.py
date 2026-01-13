@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from commands.email_settings import cadastrar_email, atualizar_email, excluir_email, atualizar_lista_email
-from commands.visor_settings import set_visor
+from commands import visor_settings
 
 
 # ++ E-MAIL ++ #
@@ -44,7 +44,18 @@ def abrir_janela_email():
     visor.grid(row=1, column=0, padx=10, pady=10, sticky="ew", columnspan=2)
     visor.insert("1.0", "Cadastre um motorista para começar...")
     visor.configure(state="disabled")
-    set_visor(visor)
+
+    visor_anterior = visor_settings.visor_global
+    visor_settings.set_visor(visor)
+
+    def ao_fechar_janela():
+        visor_settings.set_visor(visor_anterior)
+
+        # libera o grab corretamente
+        janela_principal.grab_release()
+        janela_principal.destroy()
+        
+    janela_principal.protocol("WM_DELETE_WINDOW", ao_fechar_janela)
 
     # 🔁 carrega automaticamente ao abrir
     atualizar_lista_email(email_lista, entry_nome, entry_email)

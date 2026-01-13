@@ -5,8 +5,7 @@ def set_visor(visor):
     visor_global = visor
 
 def mostrar_mensagem(texto):
-    if visor_global is None:
-        print("Visor ainda não conectado!")
+    if visor_global is None or not visor_global.winfo_exists():
         return
 
     visor_global.configure(state="normal")

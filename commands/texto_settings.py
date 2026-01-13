@@ -10,7 +10,7 @@ def obter_template():
         sessao.close()
 
 
-def carregar_template(entry_assunto, textbox_corpo):
+def carregar_template(entry_assunto, textbox_corpo, textbox_resposta):
     sessao = Session()
     try:
         template = sessao.query(EmailTemplate).first()
@@ -23,13 +23,17 @@ def carregar_template(entry_assunto, textbox_corpo):
         textbox_corpo.delete("1.0", "end")
         textbox_corpo.insert("1.0", template.corpo)
 
+        textbox_resposta.delete("1.0", "end")
+        textbox_resposta.insert("1.0", template.resposta_automatica or "")
+
     finally:
         sessao.close()
 
 
-def salvar_template(entry_assunto, textbox_corpo):
+def salvar_template(entry_assunto, textbox_corpo, textbox_resposta):
     assunto = entry_assunto.get().strip()
     corpo = textbox_corpo.get("1.0", "end-1c").strip()
+    resposta = textbox_resposta.get("1.0", "end-1c").strip()
 
     if not assunto or not corpo:
         return False
@@ -38,11 +42,12 @@ def salvar_template(entry_assunto, textbox_corpo):
     try:
         template = sessao.query(EmailTemplate).first()
         if not template:
-            template = EmailTemplate(assunto=assunto, corpo=corpo)
+            template = EmailTemplate(assunto=assunto, corpo=corpo, resposta_automatica=resposta)
             sessao.add(template)
         else:
             template.assunto = assunto
             template.corpo = corpo
+            template.resposta_automatica = resposta
 
         sessao.commit()
         mostrar_mensagem("Template salvo com sucesso!")
@@ -51,11 +56,22 @@ def salvar_template(entry_assunto, textbox_corpo):
         sessao.close()
 
 
+def obter_saudacao():
+    hora_atual = datetime.now().hour
+    if 5 <= hora_atual < 12:
+        return "Bom dia!"
+    elif 12 <= hora_atual < 18:
+        return "Boa tarde!"
+    else:
+        return "Boa noite!"
+ 
+    
 def renderizar_email(dados, motorista):
     template = obter_template()
     if not template or not dados or not motorista:
         return None, None
 
+    saudacao = obter_saudacao()
     data = datetime.now().strftime('%d/%m/%Y')
 
     assunto = template.assunto.format(
@@ -67,11 +83,13 @@ def renderizar_email(dados, motorista):
     valor_frete = dados.valor_frete or 0
 
     corpo = template.corpo.format(
+        saudacao=saudacao,
         valor_frete=f"{valor_frete:.2f}",
         placa=motorista.placa,
         motorista=motorista.nome
     )
+    resposta = None
+    if template.resposta_automatica:
+        resposta = template.resposta_automatica.format(saudacao=saudacao)
 
-    return assunto, corpo
-
-
+    return assunto, corpo, resposta

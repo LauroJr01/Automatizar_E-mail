@@ -1,6 +1,6 @@
 import os
 from tkinter import filedialog
-from commands.enviar_email import enviar_email
+from commands.enviar_email import enviar_email, responder_email_por_dados
 from database.setup_db import Session, Email, Dados, Motorista
 from commands.visor_settings import mostrar_mensagem
 from commands.anexos_state import definir_anexos, obter_anexos
@@ -138,7 +138,7 @@ def salvar_dados(selecionado, filial_btn, entry_outros, numero_combobox, entry_v
         sessao.commit()
 
         mostrar_mensagem(f"Motorista: {motorista.nome} | Placa: {motorista.placa} | Local: {local} | Número carreta: {numero_int} | Frete: R$ {frete_valor}")
-        return novo
+        return novo.id
 
     except Exception as e:
         mostrar_mensagem(f"Erro ao salvar os dados: {e}")
@@ -159,22 +159,67 @@ def anexar_arquivos():
 
 # Botão de enviar e-mail
 def salvar_e_enviar(selecionado, filial, entry_outros, numero, valor):
-    anexos = obter_anexos()
-    
+    dados_id = salvar_dados(selecionado, filial, entry_outros, numero, valor)
+    if not dados_id:
+        mostrar_mensagem("Dados incompletos. E-mail não enviado.")
+        return
+
+    anexos = obter_anexos()    
     if not anexos or len(anexos) != 2:
         mostrar_mensagem("Selecione exatamente 1 PDF e 1 XML antes de enviar o e-mail.")
-        return
-    
+        return    
     for arquivo in anexos:
         if not os.path.exists(arquivo):
             mostrar_mensagem(f"O arquivo anexado não foi encontrado:\n{arquivo}")
             return
 
-    sucesso = salvar_dados(selecionado, filial, entry_outros, numero, valor)
+    enviar_email(dados_id)
 
-    if not sucesso:
-        mostrar_mensagem("Dados incompletos. E-mail não enviado.")
+
+
+def obter_dados_por_contexto(selecionado, filial_btn, entry_outros, numero_combobox, entry_valor_frete):
+    sessao = Session()
+    try:
+        motorista_id = selecionado["motorista_id"]
+
+        local = "FILIAL" if filial_btn.get() == 1 else entry_outros.get().strip().upper()
+        numero = numero_combobox.get().replace("N°", "").strip()
+        valor = entry_valor_frete.get().replace(",", ".")
+
+        if not (motorista_id and local and numero.isdigit() and valor):
+            return None
+
+        dados = (
+            sessao.query(Dados)
+            .filter(
+                Dados.motorista_id == motorista_id,
+                Dados.local == local,
+                Dados.numero_carreta == int(numero),
+                Dados.valor_frete == float(valor)
+            )
+            .order_by(Dados.id.desc())
+            .first()
+        )
+
+        return dados.id if dados else None
+
+    finally:
+        sessao.close()
+
+
+# Botão de responder e-mail
+def salvar_e_responder(selecionado, filial, entry_outros, numero, valor):
+    dados_id = obter_dados_por_contexto(
+        selecionado,
+        filial,
+        entry_outros,
+        numero,
+        valor
+    )
+
+    if not dados_id:
+        mostrar_mensagem("Nenhum envio anterior encontrado com esses dados.")
         return
 
-    enviar_email()
+    responder_email_por_dados(dados_id)
 

@@ -6,8 +6,7 @@ from pages.motorista_page import abrir_janela_motorista
 from pages.texto_page import confirmar_texto
 from commands.email_settings import resetar_all_email
 from commands.motorista_settings import lista_motorista_dashboard
-from commands.dashboard_settings import selecionar_todos_emails, estado_checkbox_geral, selecionar_filial, selecionar_outros, aplicar_placeholder_combobox, salvar_dados, salvar_e_enviar, anexar_arquivos
-
+from commands.dashboard_settings import selecionar_todos_emails, estado_checkbox_geral, selecionar_filial, selecionar_outros, aplicar_placeholder_combobox, salvar_e_enviar, anexar_arquivos, salvar_e_responder
 
 
 def iniciar_programa():
@@ -88,9 +87,9 @@ def iniciar_programa():
 
     anexar_arquivo = ctk.CTkButton(janela_principal, text="ANEXAR", width=125, height=30, fg_color="#ff9900", hover_color="#ffaa00", font=('Arial',14,'bold'), corner_radius=5, command=lambda: anexar_arquivos())
     anexar_arquivo.grid(row=0, column=2, padx=(240,30), pady=(150,10))
-    encerrar = ctk.CTkButton(janela_principal, text="ENCERRAR", width=125, height=30, fg_color="#cc0000", hover_color="#ff0000", font=('Arial',14,'bold'), corner_radius=5)
+    encerrar = ctk.CTkButton(janela_principal, text="ENCERRAR", width=125, height=30, fg_color="#cc0000", hover_color="#ff0000", font=('Arial',14,'bold'), corner_radius=5, command=lambda: salvar_e_responder(motorista, filial, entry_outros, numero, valor))
     encerrar.grid(row=0, column=0, padx=10, pady=(150,10))
-    enviar = ctk.CTkButton(janela_principal, text="ENVIAR E-MAIL", width=125, height=30, fg_color="#00cc00", hover_color="#00ff00", font=('Arial',14,'bold'), corner_radius=5, command=lambda:(salvar_dados(motorista, filial, entry_outros, numero, valor), salvar_e_enviar(motorista, filial, entry_outros, numero, valor)))
+    enviar = ctk.CTkButton(janela_principal, text="ENVIAR E-MAIL", width=125, height=30, fg_color="#00cc00", hover_color="#00ff00", font=('Arial',14,'bold'), corner_radius=5, command=lambda: salvar_e_enviar(motorista, filial, entry_outros, numero, valor))
     enviar.grid(row=0, column=2, padx=(240,30), pady=(240,10))
 
     footer = ctk.CTkFrame(app)
@@ -99,7 +98,7 @@ def iniciar_programa():
     # == VISOR == #
     visor = ctk.CTkTextbox(footer, height=60, width=750)
     visor.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
-    visor.insert("1.0", "Cadastre um motorista para começar...")
+    visor.insert("1.0", "Bem-vindo ao sistema de automatização de e-mails!")
     visor.configure(state="disabled")
     set_visor(visor)
 

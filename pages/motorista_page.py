@@ -1,20 +1,12 @@
 import customtkinter as ctk
 from commands.motorista_settings import cadastrar_motorista, atualizar_motorista, excluir_motorista, atualizar_lista_motorista
-from commands.visor_settings import set_visor
+from commands import visor_settings
 
 def abrir_janela_motorista(on_close=None):
     janela_principal = ctk.CTkToplevel()
     janela_principal.geometry("635x365")
     janela_principal.title("Gerenciar Motoristas")
     janela_principal.grab_set()
-
-    # 🔔 intercepta o fechamento da janela
-    def fechar():
-        if on_close:
-            on_close()
-        janela_principal.destroy()
-
-    janela_principal.protocol("WM_DELETE_WINDOW", fechar)
 
     janela_motorista_lista = ctk.CTkFrame(janela_principal)
     janela_motorista_lista.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
@@ -50,7 +42,24 @@ def abrir_janela_motorista(on_close=None):
     visor.grid(row=1, column=0, padx=10, pady=10, sticky="ew", columnspan=2)
     visor.insert("1.0", "Cadastre um motorista para começar...")
     visor.configure(state="disabled")
-    set_visor(visor)
+    
+    visor_anterior = visor_settings.visor_global
+    visor_settings.set_visor(visor)
+
+    def fechar_janela():
+        # restaura visor da tela anterior
+        visor_settings.set_visor(visor_anterior)
+
+        # 🔔 intercepta o fechamento da janela
+        # callback externo (atualiza outra tela)
+        if on_close:
+            on_close()
+
+        # libera o grab corretamente
+        janela_principal.grab_release()
+        janela_principal.destroy()
+
+    janela_principal.protocol("WM_DELETE_WINDOW", fechar_janela)
 
     # 🔁 carrega automaticamente ao abrir
     atualizar_lista_motorista(entry_motorista, entry_placa, motorista_lista)

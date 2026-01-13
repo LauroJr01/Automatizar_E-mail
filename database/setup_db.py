@@ -40,5 +40,32 @@ class EmailTemplate(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     assunto = Column(String, nullable=False)
     corpo = Column(String, nullable=False)
+    resposta_automatica = Column(String, nullable=True)
+
+class EmailRegistro(Base):
+    __tablename__ = 'emails_registro'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 🔑 Identidade Outlook
+    entry_id = Column(String, nullable=False)
+    store_id = Column(String, nullable=False)
+
+    # 📬 Metadados
+    assunto = Column(String, nullable=True)
+    destinatario = Column(String, nullable=True)
+    remetente = Column(String, nullable=True)
+
+    # ⏱️ Datas
+    data_criacao = Column(String,default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    data_envio = Column(String, nullable=True)
+    data_recebimento = Column(String, nullable=True)
+
+    # 🔄 Estado
+    status = Column(String,default="recebido") # recebido | enviado | respondido | erro
+
+    # 🔗 Negócio
+    dados_id = Column(Integer, ForeignKey('dados.id'), nullable=True)
+    dados = relationship("Dados")
 
 Base.metadata.create_all(engine)

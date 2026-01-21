@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DECIMAL, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DECIMAL, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime
 
@@ -48,21 +48,22 @@ class EmailRegistro(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # 🔑 Identidade Outlook
-    entry_id = Column(String, nullable=False)
-    store_id = Column(String, nullable=False)
+    entry_id = Column(String, nullable=True)
+    store_id = Column(String, nullable=True)
+    conversation_id = Column(String, nullable=True, index=True)
 
     # 📬 Metadados
-    assunto = Column(String, nullable=True)
-    destinatario = Column(String, nullable=True)
+    assunto = Column(String, nullable=False)
+    destinatario = Column(String, nullable=False)
     remetente = Column(String, nullable=True)
 
     # ⏱️ Datas
-    data_criacao = Column(String,default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    data_envio = Column(String, nullable=True)
-    data_recebimento = Column(String, nullable=True)
+    data_criacao = Column(DateTime, default=datetime.now)
+    data_envio = Column(DateTime, nullable=True)
+    data_recebimento = Column(DateTime, nullable=True)
 
     # 🔄 Estado
-    status = Column(String,default="recebido") # recebido | enviado | respondido | erro
+    status = Column(String,nullable=False) # recebido | enviado | respondido | erro
 
     # 🔗 Negócio
     dados_id = Column(Integer, ForeignKey('dados.id'), nullable=True)

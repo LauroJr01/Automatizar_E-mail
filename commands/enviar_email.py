@@ -1,12 +1,15 @@
-import time
 import win32com.client as win32
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from commands.anexos_state import obter_anexos
 from commands.texto_settings import renderizar_email
 from commands.visor_settings import mostrar_mensagem
 from database.setup_db import Session, Dados, Motorista, Email, EmailRegistro
 
+
+# =========================================================
+# ENVIO DE E-MAIL
+# =========================================================
 def enviar_email(dados_id):
     anexos = obter_anexos()
 
@@ -15,6 +18,7 @@ def enviar_email(dados_id):
         return None
 
     sessao = Session()
+
     try:
         emails_to = sessao.query(Email).filter(Email.opcao_selecionada == 'A').all()
         emails_cc = sessao.query(Email).filter(Email.opcao_selecionada.in_(['B', 'C'])).all()
@@ -23,19 +27,21 @@ def enviar_email(dados_id):
         cc_str = '; '.join(e.email for e in emails_cc)
 
         dados = sessao.get(Dados, dados_id)
-        if not dados:
-            mostrar_mensagem("Dados não encontrados para envio.")
-            return None
-
         motorista = sessao.get(Motorista, dados.motorista_id)
-        if not motorista:
-            mostrar_mensagem("Motorista não encontrado.")
-            return None
 
         assunto, corpo, _ = renderizar_email(dados, motorista)
-        if not assunto:
-            mostrar_mensagem("Erro ao gerar o e-mail.")
-            return None
+
+        # Registro inicial (SEM dados do Outlook ainda)
+        registro = EmailRegistro(
+            assunto=assunto,
+            destinatario=to_str,
+            data_envio=datetime.now(),
+            status="aguardando_envio_outlook",
+            dados_id=dados_id
+        )
+
+        sessao.add(registro)
+        sessao.commit()
 
         outlook = win32.Dispatch("Outlook.Application")
         mail = outlook.CreateItem(0)
@@ -44,53 +50,22 @@ def enviar_email(dados_id):
         mail.CC = cc_str
         mail.Subject = assunto
 
+        mail.Display()
         assinatura = mail.HTMLBody
         mail.HTMLBody = corpo + assinatura
 
         for arquivo in anexos:
             mail.Attachments.Add(arquivo)
 
-        mail.Save()
+        try:
+            mail.Send()
+        except Exception as e:
+            registro.status = "erro"
+            sessao.commit()
+            mostrar_mensagem(f"Erro ao enviar e-mail: {e}")
+            return None
 
-        assunto = mail.Subject
-        destinatario = mail.To
-        remetente = getattr(mail, "SenderEmailAddress", None)
-
-        mail.Send()
-
-        time.sleep(1)  # Outlook precisa respirar
-
-        namespace = outlook.GetNamespace("MAPI")
-        sent_folder = namespace.GetDefaultFolder(5)  # 5 = Itens Enviados
-
-        mail_enviado = None
-        for item in sent_folder.Items:
-            if (
-                item.Subject == assunto and
-                destinatario in item.To
-            ):
-                mail_enviado = item
-                break
-
-        if not mail_enviado:
-            raise Exception("E-mail enviado, mas não localizado nos Itens Enviados.")
-
-        entry_id = mail_enviado.EntryID
-        store_id = mail_enviado.Parent.StoreID
-
-
-        registro = EmailRegistro(
-            entry_id=entry_id,
-            store_id=store_id,
-            assunto=assunto,
-            destinatario=destinatario,
-            remetente=remetente,
-            data_envio=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            status="enviado",
-            dados_id=dados_id
-        )
-
-        sessao.add(registro)
+        registro.status = "enviado"
         sessao.commit()
 
         mostrar_mensagem("E-mail enviado com sucesso.")
@@ -98,97 +73,185 @@ def enviar_email(dados_id):
 
     except Exception as e:
         sessao.rollback()
-        mostrar_mensagem(f"Erro ao enviar e-mail: {e}")
+        mostrar_mensagem(f"Erro geral ao enviar e-mail: {e}")
         return None
+
     finally:
         sessao.close()
 
 
+# =========================================================
+# SINCRONIZA COM ITENS ENVIADOS (OUTLOOK)
+# =========================================================
+def sincronizar_email_enviado(registro_id):
+    sessao = Session()
 
+    try:
+        registro = sessao.get(EmailRegistro, registro_id)
+        if not registro:
+            return False
+
+        outlook = win32.Dispatch("Outlook.Application")
+        namespace = outlook.GetNamespace("MAPI")
+
+        sent_folder = namespace.GetDefaultFolder(5)  # Itens Enviados
+        itens = sent_folder.Items
+        itens.Sort("[SentOn]", True)
+
+        data_limite = registro.data_envio - timedelta(minutes=10)
+
+        for mail in itens:
+            try:
+                if mail.Class != 43:
+                    continue
+
+                if mail.SentOn < data_limite:
+                    break
+
+                if (
+                    mail.Subject == registro.assunto and
+                    registro.destinatario.lower() in mail.To.lower()
+                ):
+                    registro.entry_id = mail.EntryID
+                    registro.store_id = mail.Parent.StoreID
+                    registro.conversation_id = mail.ConversationID
+                    registro.remetente = mail.SenderEmailAddress
+                    registro.status = "aguardando_resposta"
+
+                    sessao.commit()
+                    return True
+
+            except Exception:
+                continue
+
+        return False
+
+    except Exception as e:
+        sessao.rollback()
+        mostrar_mensagem(f"Erro ao sincronizar e-mail: {e}")
+        return False
+
+    finally:
+        sessao.close()
+
+
+# =========================================================
+# VERIFICA SE O E-MAIL FOI RESPONDIDO
+# =========================================================
+def email_foi_respondido(conversation_id):
+    outlook = win32.Dispatch("Outlook.Application")
+    namespace = outlook.GetNamespace("MAPI")
+
+    inbox = namespace.GetDefaultFolder(6)  # Caixa de Entrada
+    itens = inbox.Items
+    itens.Sort("[ReceivedTime]", True)
+
+    for mail in itens:
+        try:
+            if mail.Class != 43:
+                continue
+
+            if mail.ConversationID == conversation_id:
+                return mail
+
+        except Exception:
+            continue
+
+    return None
+
+
+# =========================================================
+# BUSCAR RESPOSTA POR ASSUNTO E DESTINATÁRIO
+# =========================================================
+def buscar_resposta_por_assunto_e_destinatario(registro):
+    outlook = win32.Dispatch("Outlook.Application")
+    namespace = outlook.GetNamespace("MAPI")
+    inbox = namespace.GetDefaultFolder(6)  # Caixa de Entrada
+
+    itens = inbox.Items
+    itens.Sort("[ReceivedTime]", True)
+
+    for mail in itens:
+        try:
+            if mail.Class != 43:
+                continue
+
+            if (
+                mail.Subject == registro.assunto or
+                mail.Subject.endswith(registro.assunto)
+            ):
+                return mail
+
+        except Exception:
+            continue
+
+    return None
+
+
+# =========================================================
+# RESPONDER / ENCERRAR E-MAIL COM BASE NOS DADOS
+# =========================================================
 def responder_email_por_dados(dados_id):
     sessao = Session()
+
     try:
-        # Busca o último e-mail ENVIADO com esse contexto
-        email_base = (
+        registro = (
             sessao.query(EmailRegistro)
             .filter(
                 EmailRegistro.dados_id == dados_id,
-                EmailRegistro.status == "enviado"
+                EmailRegistro.status.in_(["aguardando_resposta", "enviado"])
             )
             .order_by(EmailRegistro.data_envio.desc())
             .first()
         )
 
-        if not email_base:
-            mostrar_mensagem("Nenhum e-mail enviado encontrado para resposta.")
+        if not registro:
+            mostrar_mensagem("Nenhum e-mail ativo encontrado para esse envio.")
             return
 
-        dados = sessao.get(Dados, dados_id)
-        if not dados:
-            mostrar_mensagem("Dados não encontrados.")
-            return
+        # Garante que o Outlook já reconheceu o envio
+        if not registro.conversation_id:
+            resposta = buscar_resposta_por_assunto_e_destinatario(registro)
 
-        motorista = sessao.get(Motorista, dados.motorista_id)
-        if not motorista:
-            mostrar_mensagem("Motorista não encontrado.")
-            return
+            if not resposta:
+                mostrar_mensagem("O e-mail ainda não foi respondido.")
+                return
 
-        assunto, corpo, texto_resposta = renderizar_email(dados, motorista)
-        if not corpo and not texto_resposta:
-            mostrar_mensagem("Erro ao gerar a resposta.")
+            # Agora sim, aprendemos a conversa pela resposta
+            registro.conversation_id = resposta.ConversationID
+            registro.data_recebimento = resposta.ReceivedTime
+            registro.status = "aguardando_resposta"
+            sessao.commit()
+
+
+        resposta = email_foi_respondido(registro.conversation_id)
+
+        if not resposta:
+            mostrar_mensagem("O e-mail ainda não foi respondido.")
             return
         
-        texto_resposta = texto_resposta or ''
-        corpo = corpo or ''
+        dados = sessao.get(Dados, dados_id)
+        motorista = sessao.get(Motorista, dados.motorista_id)
 
-        outlook = win32.Dispatch("Outlook.Application")
-        namespace = outlook.GetNamespace("MAPI")
+        _, _, resposta_automatica = renderizar_email(dados, motorista)
 
-        mail_item = namespace.GetItemFromID(
-            email_base.entry_id,
-            email_base.store_id
-        )
+        if not resposta_automatica:
+            mostrar_mensagem("Nenhuma resposta automática configurada.")
+            return
 
-        resposta = mail_item.ReplyAll()
+        reply = resposta.Reply()
+        reply.HTMLBody = (resposta_automatica + reply.HTMLBody)
+        reply.Send()
 
-        assinatura = resposta.HTMLBody
-        if texto_resposta:
-            resposta.HTMLBody = texto_resposta + assinatura
-        else:
-            resposta.HTMLBody = corpo + assinatura
+        registro.status = "encerrado"
+        registro.data_recebimento = resposta.ReceivedTime
 
-        resposta.Save()
-
-        assunto_resp = resposta.Subject
-        destinatario_resp = resposta.To
-        remetente_resp = resposta.SenderEmailAddress
-
-        entry_id_resp = resposta.EntryID
-        store_id_resp = resposta.Parent.StoreID
-
-        resposta.Send()
-
-        registro_resposta = EmailRegistro(
-            entry_id=entry_id_resp,
-            store_id=store_id_resp,
-            assunto=assunto_resp,
-            destinatario=destinatario_resp,
-            remetente=remetente_resp,
-            data_envio=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            status="respondido",
-            dados_id=dados_id
-        )
-
-        email_base.status = "respondido"
-
-        sessao.add(registro_resposta)
-        sessao.add(email_base)
         sessao.commit()
-
-        mostrar_mensagem("Resposta enviada com sucesso.")
+        mostrar_mensagem("E-mail encerrado com sucesso.")
 
     except Exception as e:
         sessao.rollback()
-        mostrar_mensagem(f"Erro ao responder e-mail: {e}")
+        mostrar_mensagem(f"Erro ao encerrar e-mail: {e}")
+
     finally:
         sessao.close()

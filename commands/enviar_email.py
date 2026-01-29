@@ -239,7 +239,7 @@ def responder_email_por_dados(dados_id):
             mostrar_mensagem("Nenhuma resposta automática configurada.")
             return
 
-        reply = resposta.Reply()
+        reply = resposta.ReplyAll()
         reply.HTMLBody = (resposta_automatica + reply.HTMLBody)
         reply.Send()
 

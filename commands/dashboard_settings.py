@@ -173,9 +173,9 @@ def salvar_e_enviar(selecionado, filial, entry_outros, numero, valor):
         return
 
     anexos = obter_anexos()    
-    if not anexos or len(anexos) != 2:
-        mostrar_mensagem("Selecione exatamente 1 PDF e 1 XML antes de enviar o e-mail.")
-        return    
+    if not anexos:
+        mostrar_mensagem("Nenhum arquivo selecionado.")
+        return False   
     for arquivo in anexos:
         if not os.path.exists(arquivo):
             mostrar_mensagem(f"O arquivo anexado não foi encontrado:\n{arquivo}")

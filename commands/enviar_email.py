@@ -13,9 +13,9 @@ from database.setup_db import Session, Dados, Motorista, Email, EmailRegistro
 def enviar_email(dados_id):
     anexos = obter_anexos()
 
-    if not anexos or len(anexos) != 2:
-        mostrar_mensagem("E-mail não enviado. Anexos obrigatórios não foram selecionados.")
-        return None
+    if not anexos:
+        mostrar_mensagem("Nenhum arquivo selecionado.")
+        return False
 
     sessao = Session()
 
@@ -239,7 +239,7 @@ def responder_email_por_dados(dados_id):
             mostrar_mensagem("Nenhuma resposta automática configurada.")
             return
 
-        reply = resposta.Reply()
+        reply = resposta.ReplyAll()
         reply.HTMLBody = (resposta_automatica + reply.HTMLBody)
         reply.Send()
 

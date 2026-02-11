@@ -156,9 +156,9 @@ def salvar_dados(selecionado, filial_btn, entry_outros, numero_combobox, entry_v
 
 # Botão de anexar arquivo
 def anexar_arquivos():
-    arquivos = filedialog.askopenfilenames(title="Selecione os 02 arquivos obrigatórios", filetypes=[("Todos os arquivos", "*.*")])
-    if len(arquivos) != 2:
-        mostrar_mensagem("Por favor, selecione exatamente 2 arquivos: 1 PDF e 1 XML.")
+    arquivos = filedialog.askopenfilenames(title="Selecione os arquivos", filetypes=[("Todos os arquivos", "*.*")])
+    if not arquivos:
+        mostrar_mensagem("Nenhum arquivo selecionado.")
         return False
     definir_anexos(list(arquivos))
     mostrar_mensagem("Arquivos anexados com sucesso.")
@@ -173,9 +173,9 @@ def salvar_e_enviar(selecionado, filial, entry_outros, numero, valor):
         return
 
     anexos = obter_anexos()    
-    if not anexos or len(anexos) != 2:
-        mostrar_mensagem("Selecione exatamente 1 PDF e 1 XML antes de enviar o e-mail.")
-        return    
+    if not anexos:
+        mostrar_mensagem("Nenhum arquivo selecionado.")
+        return False   
     for arquivo in anexos:
         if not os.path.exists(arquivo):
             mostrar_mensagem(f"O arquivo anexado não foi encontrado:\n{arquivo}")
